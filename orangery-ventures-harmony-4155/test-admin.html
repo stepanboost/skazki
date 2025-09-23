@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест админ-панели</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .file-upload {
+            margin: 10px 0;
+            padding: 15px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .file-upload.dragover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .file-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест функций админ-панели</h1>
+    
+    <div class="test-section">
+        <h2>1. Тест загрузки аудиофайлов</h2>
+        <p>Проверяем, что аудиофайлы правильно сохраняются в localStorage</p>
+        
+        <div class="file-upload" id="audioUpload">
+            <p>Перетащите аудиофайл сюда или выберите файл</p>
+            <input type="file" id="audioInput" accept="audio/*">
+        </div>
+        
+        <div id="audioResult" class="test-result info">Выберите аудиофайл для тестирования</div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Тест загрузки изображений</h2>
+        <p>Проверяем, что изображения правильно сохраняются в localStorage</p>
+        
+        <div class="file-upload" id="imageUpload">
+            <p>Перетащите изображение сюда или выберите файл</p>
+            <input type="file" id="imageInput" accept="image/*">
+        </div>
+        
+        <div id="imageResult" class="test-result info">Выберите изображение для тестирования</div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Тест воспроизведения загруженного аудио</h2>
+        <p>Проверяем, что загруженные аудиофайлы можно воспроизводить</p>
+        
+        <audio id="testAudio" controls style="width: 100%; margin: 10px 0;"></audio>
+        <br>
+        <button onclick="testAudioPlayback()">Тестировать воспроизведение</button>
+        <div id="playbackResult" class="test-result info">Сначала загрузите аудиофайл</div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Тест скачивания загруженных файлов</h2>
+        <p>Проверяем, что загруженные файлы можно скачать</p>
+        
+        <button onclick="testDownload()">Тестировать скачивание</button>
+        <div id="downloadResult" class="test-result info">Нажмите кнопку для тестирования</div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Проверка localStorage</h2>
+        <p>Проверяем содержимое localStorage</p>
+        
+        <button onclick="checkStorage()">Проверить localStorage</button>
+        <div id="storageResult" class="test-result info">Нажмите кнопку для проверки</div>
+    </div>
+
+    <div class="test-section">
+        <h2>6. Инструкции для полного тестирования</h2>
+        <div class="info" style="padding: 15px;">
+            <h3>Для полного тестирования админ-панели:</h3>
+            <ol>
+                <li>Откройте основное приложение по адресу <a href="http://localhost:8082" target="_blank">http://localhost:8082</a></li>
+                <li>Перейдите в админ-панель: <a href="http://localhost:8082/admin" target="_blank">http://localhost:8082/admin</a></li>
+                <li>Войдите в админку (логин: admin, пароль: admin)</li>
+                <li>Нажмите "Добавить новую сказку"</li>
+                <li>Заполните форму и загрузите аудиофайл и изображение</li>
+                <li>Сохраните сказку</li>
+                <li>Перейдите на главную страницу и проверьте, что сказка отображается</li>
+                <li>Попробуйте воспроизвести аудио и скачать файл</li>
+                <li>Обновите страницу и проверьте, что все работает после перезагрузки</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let uploadedAudioId = null;
+        let uploadedImageId = null;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `test-result ${type}`;
+        }
+
+        // Обработка загрузки аудио
+        document.getElementById('audioInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('audio/')) {
+                uploadAudioFile(file);
+            } else {
+                showResult('audioResult', '❌ Пожалуйста, выберите аудиофайл', 'error');
+            }
+        });
+
+        function uploadAudioFile(file) {
+            const fileId = `audio_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                
+                // Сохраняем файл в localStorage (как в исправленном коде)
+                localStorage.setItem(`audio_${fileId}`, base64);
+                uploadedAudioId = fileId;
+                
+                showResult('audioResult', `✅ Аудиофайл успешно сохранен! ID: ${fileId}`, 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Обработка загрузки изображений
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                uploadImageFile(file);
+            } else {
+                showResult('imageResult', '❌ Пожалуйста, выберите изображение', 'error');
+            }
+        });
+
+        function uploadImageFile(file) {
+            const fileId = `image_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                
+                // Сохраняем файл в localStorage
+                localStorage.setItem(`image_${fileId}`, base64);
+                uploadedImageId = fileId;
+                
+                showResult('imageResult', `✅ Изображение успешно сохранено! ID: ${fileId}`, 'success');
+                
+                // Показываем превью
+                const preview = document.createElement('img');
+                preview.src = base64;
+                preview.style.maxWidth = '200px';
+                preview.style.marginTop = '10px';
+                preview.style.borderRadius = '4px';
+                
+                const resultDiv = document.getElementById('imageResult');
+                resultDiv.appendChild(document.createElement('br'));
+                resultDiv.appendChild(preview);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function testAudioPlayback() {
+            if (!uploadedAudioId) {
+                showResult('playbackResult', '❌ Сначала загрузите аудиофайл', 'error');
+                return;
+            }
+
+            try {
+                const audioData = localStorage.getItem(`audio_${uploadedAudioId}`);
+                if (audioData) {
+                    const audio = document.getElementById('testAudio');
+                    audio.src = audioData;
+                    
+                    showResult('playbackResult', '✅ Аудиофайл загружен в плеер. Нажмите play для тестирования', 'success');
+                } else {
+                    showResult('playbackResult', '❌ Аудиофайл не найден в localStorage', 'error');
+                }
+            } catch (error) {
+                showResult('playbackResult', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+
+        function testDownload() {
+            if (!uploadedAudioId) {
+                showResult('downloadResult', '❌ Сначала загрузите аудиофайл', 'error');
+                return;
+            }
+
+            try {
+                const audioData = localStorage.getItem(`audio_${uploadedAudioId}`);
+                if (audioData) {
+                    // Создаем blob URL для скачивания
+                    const base64 = audioData.split(',')[1];
+                    const byteCharacters = atob(base64);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray]);
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Создаем ссылку для скачивания
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = url;
+                    downloadLink.download = `${uploadedAudioId}.mp3`;
+                    downloadLink.style.display = 'none';
+                    
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                    
+                    URL.revokeObjectURL(url);
+                    
+                    showResult('downloadResult', '✅ Скачивание запущено! Проверьте папку загрузок', 'success');
+                } else {
+                    showResult('downloadResult', '❌ Аудиофайл не найден в localStorage', 'error');
+                }
+            } catch (error) {
+                showResult('downloadResult', `❌ Ошибка скачивания: ${error.message}`, 'error');
+            }
+        }
+
+        function checkStorage() {
+            const audioFiles = [];
+            const imageFiles = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key) {
+                    if (key.startsWith('audio_')) {
+                        audioFiles.push(key.replace('audio_', ''));
+                    } else if (key.startsWith('image_')) {
+                        imageFiles.push(key.replace('image_', ''));
+                    }
+                }
+            }
+            
+            let info = '📊 Содержимое localStorage:\n\n';
+            info += `🎵 Аудиофайлы (${audioFiles.length}):\n`;
+            audioFiles.forEach(file => {
+                info += `   - ${file}\n`;
+            });
+            
+            info += `\n🖼️ Изображения (${imageFiles.length}):\n`;
+            imageFiles.forEach(file => {
+                info += `   - ${file}\n`;
+            });
+            
+            info += `\n📚 Сказки: ${localStorage.getItem('fairyTales') ? '✅ Есть' : '❌ Нет'}`;
+            info += `\n🎧 Состояние аудио: ${localStorage.getItem('audioState') ? '✅ Есть' : '❌ Нет'}`;
+            
+            showResult('storageResult', info, 'info');
+        }
+
+        // Drag and drop для аудио
+        const audioUpload = document.getElementById('audioUpload');
+        audioUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            audioUpload.classList.add('dragover');
+        });
+        
+        audioUpload.addEventListener('dragleave', () => {
+            audioUpload.classList.remove('dragover');
+        });
+        
+        audioUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            audioUpload.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('audio/')) {
+                uploadAudioFile(files[0]);
+            } else {
+                showResult('audioResult', '❌ Пожалуйста, перетащите аудиофайл', 'error');
+            }
+        });
+
+        // Drag and drop для изображений
+        const imageUpload = document.getElementById('imageUpload');
+        imageUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUpload.classList.add('dragover');
+        });
+        
+        imageUpload.addEventListener('dragleave', () => {
+            imageUpload.classList.remove('dragover');
+        });
+        
+        imageUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUpload.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                uploadImageFile(files[0]);
+            } else {
+                showResult('imageResult', '❌ Пожалуйста, перетащите изображение', 'error');
+            }
+        });
+
+        // Автоматически проверяем localStorage при загрузке
+        window.addEventListener('load', () => {
+            checkStorage();
+        });
+    </script>
+</body>
+</html>

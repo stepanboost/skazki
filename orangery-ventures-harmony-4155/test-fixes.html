@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправлений</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .audio-test {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест исправлений</h1>
+    
+    <div class="test-card">
+        <h2>1. Тест имени файла при скачивании</h2>
+        <p>Проверяем, что файл скачивается с правильным именем (skazkanesm.mp3 вместо Сказка.mp3)</p>
+        
+        <button onclick="testDownloadFilename()">Тестировать скачивание</button>
+        <div id="downloadResult" class="test-result info">Нажмите кнопку для тестирования</div>
+    </div>
+
+    <div class="test-card">
+        <h2>2. Тест восстановления аудио после обновления</h2>
+        <p>Проверяем, что аудио продолжает играть после обновления страницы</p>
+        
+        <div class="audio-test">
+            <audio id="testAudio" controls>
+                <source src="/skazkanesm.mp3" type="audio/mpeg">
+                Ваш браузер не поддерживает аудио элемент.
+            </audio>
+            <br>
+            <button onclick="startAudioTest()">Начать тест аудио</button>
+            <button onclick="simulateReload()">Симулировать обновление</button>
+        </div>
+        
+        <div id="audioResult" class="test-result info">Нажмите "Начать тест аудио"</div>
+    </div>
+
+    <div class="test-card">
+        <h2>3. Проверка localStorage</h2>
+        <p>Проверяем сохранение данных в localStorage</p>
+        
+        <button onclick="checkLocalStorage()">Проверить localStorage</button>
+        <div id="localStorageResult" class="test-result info">Нажмите кнопку для проверки</div>
+    </div>
+
+    <div class="test-card">
+        <h2>4. Инструкции для тестирования</h2>
+        <div class="info" style="padding: 15px;">
+            <h3>Для полного тестирования:</h3>
+            <ol>
+                <li>Откройте основное приложение по адресу <a href="http://localhost:8082" target="_blank">http://localhost:8082</a></li>
+                <li>Нажмите кнопку воспроизведения на любой сказке</li>
+                <li>Дождитесь начала воспроизведения</li>
+                <li>Обновите страницу (F5 или Ctrl+R)</li>
+                <li>Проверьте, что аудио продолжает играть с того же места</li>
+                <li>Попробуйте скачать файл - должно скачаться с именем "skazkanesm.mp3"</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `test-result ${type}`;
+        }
+
+        function testDownloadFilename() {
+            try {
+                // Симулируем скачивание файла
+                const testUrl = '/skazkanesm.mp3';
+                const fallbackTitle = 'Сказка';
+                
+                // Извлекаем оригинальное имя файла (как в исправленном коде)
+                const getOriginalFileName = (url, fallbackTitle) => {
+                    try {
+                        const urlPath = new URL(url, window.location.origin).pathname;
+                        const originalName = urlPath.split('/').pop();
+                        if (originalName && originalName.includes('.')) {
+                            return originalName;
+                        }
+                    } catch (e) {
+                        // Если URL невалидный, используем fallback
+                    }
+                    return `${fallbackTitle.replace(/[^a-zA-Z0-9а-яА-Я\s]/g, '')}.mp3`;
+                };
+                
+                const fileName = getOriginalFileName(testUrl, fallbackTitle);
+                
+                if (fileName === 'skazkanesm.mp3') {
+                    showResult('downloadResult', '✅ УСПЕХ! Файл будет скачан с правильным именем: ' + fileName, 'success');
+                } else {
+                    showResult('downloadResult', '❌ ОШИБКА! Файл будет скачан с неправильным именем: ' + fileName, 'error');
+                }
+            } catch (error) {
+                showResult('downloadResult', '❌ ОШИБКА: ' + error.message, 'error');
+            }
+        }
+
+        function startAudioTest() {
+            const audio = document.getElementById('testAudio');
+            
+            // Сохраняем состояние аудио
+            localStorage.setItem('audioSrc', '/skazkanesm.mp3');
+            localStorage.setItem('audioState', JSON.stringify({
+                currentTime: 0,
+                volume: 1,
+                isMuted: false,
+                currentFairyTaleId: '1'
+            }));
+            
+            audio.play().then(() => {
+                showResult('audioResult', '✅ Аудио запущено! Теперь нажмите "Симулировать обновление"', 'success');
+                
+                // Через 2 секунды сохраняем флаг о том, что аудио играет
+                setTimeout(() => {
+                    localStorage.setItem('audioWasPlaying', 'true');
+                    showResult('audioResult', '✅ Флаг воспроизведения сохранен! Теперь симулируйте обновление', 'success');
+                }, 2000);
+                
+            }).catch(error => {
+                showResult('audioResult', '❌ Не удалось запустить аудио: ' + error.message, 'error');
+            });
+        }
+
+        function simulateReload() {
+            // Проверяем, что данные сохранены
+            const audioSrc = localStorage.getItem('audioSrc');
+            const audioState = localStorage.getItem('audioState');
+            const wasPlaying = localStorage.getItem('audioWasPlaying');
+            
+            if (audioSrc && audioState && wasPlaying === 'true') {
+                showResult('audioResult', '✅ ВСЕ ДАННЫЕ СОХРАНЕНЫ! При реальном обновлении аудио должно продолжить играть с того же места.', 'success');
+                
+                // Симулируем восстановление
+                setTimeout(() => {
+                    const audio = document.getElementById('testAudio');
+                    audio.currentTime = 5; // Устанавливаем время на 5 секунд
+                    audio.volume = 0.8; // Устанавливаем громкость
+                    showResult('audioResult', '✅ ВОССТАНОВЛЕНИЕ СИМУЛИРОВАНО! Аудио настроено на время 5с, громкость 0.8', 'success');
+                }, 1000);
+            } else {
+                showResult('audioResult', '❌ Данные не сохранены! audioSrc: ' + !!audioSrc + ', audioState: ' + !!audioState + ', wasPlaying: ' + wasPlaying, 'error');
+            }
+        }
+
+        function checkLocalStorage() {
+            const keys = ['fairyTales', 'fairyTales_backup', 'audioState', 'audioSrc', 'audioWasPlaying'];
+            let info = '📊 Содержимое localStorage:\n\n';
+            
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    info += `✅ ${key}: ${value.length > 50 ? value.substring(0, 50) + '...' : value}\n`;
+                } else {
+                    info += `❌ ${key}: отсутствует\n`;
+                }
+            });
+            
+            showResult('localStorageResult', info, 'info');
+        }
+
+        // Автоматически проверяем localStorage при загрузке
+        window.addEventListener('load', () => {
+            checkLocalStorage();
+        });
+    </script>
+</body>
+</html>

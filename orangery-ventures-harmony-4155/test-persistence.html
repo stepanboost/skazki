@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест сохранения данных</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест сохранения данных сказок</h1>
+    
+    <div class="test-section">
+        <h2>1. Тест localStorage для сказок</h2>
+        <button onclick="testFairyTalesStorage()">Проверить сохранение сказок</button>
+        <button onclick="clearFairyTalesStorage()">Очистить сказки</button>
+        <div id="fairyTalesStatus" class="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Тест localStorage для аудио</h2>
+        <button onclick="testAudioStorage()">Проверить сохранение аудио</button>
+        <button onclick="clearAudioStorage()">Очистить аудио</button>
+        <div id="audioStatus" class="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Тест восстановления данных</h2>
+        <button onclick="simulatePageReload()">Симулировать перезагрузку страницы</button>
+        <div id="restoreStatus" class="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Текущее состояние localStorage</h2>
+        <button onclick="showLocalStorage()">Показать все данные</button>
+        <div id="localStorageStatus" class="status"></div>
+    </div>
+
+    <script>
+        // Тестовые данные
+        const testFairyTales = [
+            {
+                id: '1',
+                title: 'Тестовая сказка',
+                author: 'Тестовый автор',
+                content: 'Содержание тестовой сказки...',
+                audioFile: '/test-audio.mp3',
+                status: 'published',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                order: 1
+            }
+        ];
+
+        const testAudioState = {
+            currentTime: 120,
+            volume: 0.8,
+            isMuted: false,
+            currentFairyTaleId: '1'
+        };
+
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        function testFairyTalesStorage() {
+            try {
+                // Сохраняем тестовые данные
+                localStorage.setItem('fairyTales', JSON.stringify(testFairyTales));
+                localStorage.setItem('fairyTales_backup', JSON.stringify(testFairyTales));
+                
+                // Проверяем, что данные сохранились
+                const saved = localStorage.getItem('fairyTales');
+                const backup = localStorage.getItem('fairyTales_backup');
+                
+                if (saved && backup) {
+                    const parsedSaved = JSON.parse(saved);
+                    const parsedBackup = JSON.parse(backup);
+                    
+                    if (Array.isArray(parsedSaved) && Array.isArray(parsedBackup)) {
+                        showStatus('fairyTalesStatus', 
+                            `✅ Сказки успешно сохранены! Основная копия: ${parsedSaved.length} сказок, Резервная: ${parsedBackup.length} сказок`, 
+                            'success');
+                    } else {
+                        showStatus('fairyTalesStatus', '❌ Данные сказок повреждены', 'error');
+                    }
+                } else {
+                    showStatus('fairyTalesStatus', '❌ Не удалось сохранить сказки', 'error');
+                }
+            } catch (error) {
+                showStatus('fairyTalesStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+
+        function testAudioStorage() {
+            try {
+                // Сохраняем тестовое состояние аудио
+                localStorage.setItem('audioState', JSON.stringify(testAudioState));
+                
+                // Проверяем, что данные сохранились
+                const saved = localStorage.getItem('audioState');
+                
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    
+                    if (parsed.currentFairyTaleId && typeof parsed.currentTime === 'number') {
+                        showStatus('audioStatus', 
+                            `✅ Аудио состояние успешно сохранено! Трек: ${parsed.currentFairyTaleId}, Время: ${parsed.currentTime}с`, 
+                            'success');
+                    } else {
+                        showStatus('audioStatus', '❌ Данные аудио повреждены', 'error');
+                    }
+                } else {
+                    showStatus('audioStatus', '❌ Не удалось сохранить аудио состояние', 'error');
+                }
+            } catch (error) {
+                showStatus('audioStatus', `❌ Ошибка: ${error.message}`, 'error');
+            }
+        }
+
+        function simulatePageReload() {
+            try {
+                // Проверяем, что данные можно восстановить
+                const fairyTales = localStorage.getItem('fairyTales');
+                const audioState = localStorage.getItem('audioState');
+                const backup = localStorage.getItem('fairyTales_backup');
+                
+                let restoredCount = 0;
+                let totalCount = 0;
+                
+                if (fairyTales) {
+                    totalCount++;
+                    try {
+                        const parsed = JSON.parse(fairyTales);
+                        if (Array.isArray(parsed)) {
+                            restoredCount++;
+                        }
+                    } catch (e) {
+                        // Проверяем резервную копию
+                        if (backup) {
+                            try {
+                                const parsedBackup = JSON.parse(backup);
+                                if (Array.isArray(parsedBackup)) {
+                                    restoredCount++;
+                                }
+                            } catch (e2) {}
+                        }
+                    }
+                }
+                
+                if (audioState) {
+                    totalCount++;
+                    try {
+                        const parsed = JSON.parse(audioState);
+                        if (parsed.currentFairyTaleId) {
+                            restoredCount++;
+                        }
+                    } catch (e) {}
+                }
+                
+                if (restoredCount === totalCount && totalCount > 0) {
+                    showStatus('restoreStatus', 
+                        `✅ Все данные успешно восстановлены! (${restoredCount}/${totalCount})`, 
+                        'success');
+                } else {
+                    showStatus('restoreStatus', 
+                        `⚠️ Восстановлено частично: ${restoredCount}/${totalCount}`, 
+                        'error');
+                }
+            } catch (error) {
+                showStatus('restoreStatus', `❌ Ошибка восстановления: ${error.message}`, 'error');
+            }
+        }
+
+        function clearFairyTalesStorage() {
+            localStorage.removeItem('fairyTales');
+            localStorage.removeItem('fairyTales_backup');
+            showStatus('fairyTalesStatus', '🗑️ Данные сказок очищены', 'info');
+        }
+
+        function clearAudioStorage() {
+            localStorage.removeItem('audioState');
+            showStatus('audioStatus', '🗑️ Данные аудио очищены', 'info');
+        }
+
+        function showLocalStorage() {
+            const keys = ['fairyTales', 'fairyTales_backup', 'audioState'];
+            let info = '📊 Содержимое localStorage:\n\n';
+            
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        info += `🔑 ${key}:\n`;
+                        if (Array.isArray(parsed)) {
+                            info += `   Массив с ${parsed.length} элементами\n`;
+                        } else if (typeof parsed === 'object') {
+                            info += `   Объект с ключами: ${Object.keys(parsed).join(', ')}\n`;
+                        } else {
+                            info += `   Значение: ${parsed}\n`;
+                        }
+                        info += '\n';
+                    } catch (e) {
+                        info += `🔑 ${key}: Невалидный JSON\n\n`;
+                    }
+                } else {
+                    info += `🔑 ${key}: Отсутствует\n\n`;
+                }
+            });
+            
+            showStatus('localStorageStatus', info, 'info');
+        }
+
+        // Автоматически показываем текущее состояние при загрузке
+        window.addEventListener('load', () => {
+            showLocalStorage();
+        });
+    </script>
+</body>
+</html>

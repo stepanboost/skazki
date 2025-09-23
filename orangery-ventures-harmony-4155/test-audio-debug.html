@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест аудио - отладка</title>
+</head>
+<body>
+    <h1>Тест аудио - отладка</h1>
+    
+    <div>
+        <h2>Прямое воспроизведение:</h2>
+        <audio controls>
+            <source src="http://localhost:8080/skazkanesm.mp3" type="audio/mpeg">
+            Ваш браузер не поддерживает аудио элемент.
+        </audio>
+    </div>
+    
+    <div>
+        <h2>Тест через JavaScript:</h2>
+        <button onclick="testAudio()">Тест аудио</button>
+        <div id="status"></div>
+    </div>
+    
+    <script>
+        function testAudio() {
+            const status = document.getElementById('status');
+            status.innerHTML = 'Тестируем аудио...';
+            
+            const audio = new Audio('http://localhost:8080/skazkanesm.mp3');
+            
+            audio.addEventListener('loadstart', () => {
+                status.innerHTML += '<br>loadstart - началась загрузка';
+            });
+            
+            audio.addEventListener('loadedmetadata', () => {
+                status.innerHTML += '<br>loadedmetadata - метаданные загружены, длительность: ' + audio.duration;
+            });
+            
+            audio.addEventListener('canplay', () => {
+                status.innerHTML += '<br>canplay - можно воспроизводить';
+            });
+            
+            audio.addEventListener('play', () => {
+                status.innerHTML += '<br>play - воспроизведение началось';
+            });
+            
+            audio.addEventListener('error', (e) => {
+                status.innerHTML += '<br>error - ошибка: ' + e.message;
+                console.error('Ошибка аудио:', e);
+            });
+            
+            audio.play().then(() => {
+                status.innerHTML += '<br>play() успешно выполнен';
+            }).catch(error => {
+                status.innerHTML += '<br>play() ошибка: ' + error.message;
+                console.error('Ошибка play():', error);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Простой тест аудио</title>
+</head>
+<body>
+    <h1>Простой тест аудио</h1>
+    
+    <div>
+        <h2>HTML5 Audio элемент:</h2>
+        <audio controls>
+            <source src="/skazkanesm.mp3" type="audio/mpeg">
+            Ваш браузер не поддерживает аудио элемент.
+        </audio>
+    </div>
+    
+    <div>
+        <h2>JavaScript тест:</h2>
+        <button onclick="testAudio()">Тест воспроизведения</button>
+        <div id="status"></div>
+    </div>
+    
+    <script>
+        function testAudio() {
+            const status = document.getElementById('status');
+            status.innerHTML = 'Тестируем...';
+            
+            const audio = new Audio('/skazkanesm.mp3');
+            
+            audio.addEventListener('canplay', () => {
+                status.innerHTML = 'Аудио готово к воспроизведению!';
+                audio.play();
+            });
+            
+            audio.addEventListener('play', () => {
+                status.innerHTML = 'Воспроизведение началось!';
+            });
+            
+            audio.addEventListener('error', (e) => {
+                status.innerHTML = 'Ошибка: ' + e.message;
+            });
+        }
+    </script>
+</body>
+</html>
