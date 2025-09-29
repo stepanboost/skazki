@@ -8,7 +8,7 @@ from src.utils.admin_auth import get_current_active_admin
 from src.utils.minio_client import minio_client
 import uuid
 
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(prefix="/files", tags=["Файлы"])
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_files(
@@ -244,91 +244,5 @@ async def replace_cover_file(
         presigned_url=presigned_url or ""
     )
 
-@router.get("/download", response_model=FileDownloadResponse)
-async def get_file_download_url(
-    external_name: str = Query(..., description="External name of the file (e.g., audio_xxx or cover_xxx)")
-):
-    """Получение presigned URL для скачивания файла по external_name"""
-    # Генерируем presigned URL
-    presigned_url = minio_client.get_presigned_url(external_name)
-    
-    if not presigned_url:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate presigned URL"
-        )
-    
-    return FileDownloadResponse(
-        external_name=external_name,
-        presigned_url=presigned_url
-    )
 
-@router.delete("/audio/{fairy_tale_external_id}")
-async def delete_audio_file(
-    fairy_tale_external_id: str,
-    current_admin = Depends(get_current_active_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Удаление аудиофайла"""
-    # Находим сказку по external_id
-    result = await db.execute(select(FairyTale).filter(FairyTale.external_id == fairy_tale_external_id))
-    fairy_tale = result.scalar_one_or_none()
-    
-    if not fairy_tale:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Fairy tale not found"
-        )
-    
-    if not fairy_tale.audio_external_name:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Audio file not found"
-        )
-    
-    # Удаляем из MinIO
-    minio_client.delete_file(fairy_tale.audio_external_name)
-    
-    # Очищаем external_name в сказке
-    fairy_tale.audio_external_name = None
-    
-    # Удаляем метаинформацию из БД
-    audio_result = await db.execute(select(AudioFile).filter(AudioFile.fairy_tale_id == fairy_tale.id))
-    audio_file = audio_result.scalar_one_or_none()
-    if audio_file:
-        await db.delete(audio_file)
-    
-    await db.commit()
-    
-    return {"message": "Audio file deleted successfully"}
 
-@router.delete("/cover/{fairy_tale_external_id}")
-async def delete_cover_image(
-    fairy_tale_external_id: str,
-    current_admin = Depends(get_current_active_admin),
-    db: AsyncSession = Depends(get_db)
-):
-    """Удаление обложки сказки"""
-    result = await db.execute(select(FairyTale).filter(FairyTale.external_id == fairy_tale_external_id))
-    fairy_tale = result.scalar_one_or_none()
-    
-    if not fairy_tale:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Fairy tale not found"
-        )
-    
-    if not fairy_tale.cover_external_name:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cover image not found"
-        )
-    
-    # Удаляем из MinIO
-    minio_client.delete_file(fairy_tale.cover_external_name)
-    
-    # Очищаем external_name обложки в сказке
-    fairy_tale.cover_external_name = None
-    await db.commit()
-    
-    return {"message": "Cover image deleted successfully"}

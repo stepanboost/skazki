@@ -1,33 +1,25 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from src.utils.password_utils import verify_password, get_password_hash
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.database.database import get_db
 from src.database.models import Admin
+from src.database.operations.admin_operations import AdminOperations
 from src.config import settings
 from src.redis.client import redis_client
-import secrets
 import logging
 import bcrypt
 
-# Патч для совместимости с passlib
 if not hasattr(bcrypt, '__about__'):
     bcrypt.__about__ = type('obj', (object,), {'__version__': '4.3.0'})
 
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
 
 def create_admin_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -45,7 +37,6 @@ def create_admin_refresh_token(data: dict, expires_delta: Optional[timedelta] = 
     if expires_delta:
         expire = datetime.now() + expires_delta
     else:
-        # Refresh токен живет дольше - 3 дня
         expire = datetime.now() + timedelta(days=settings.admin_refresh_token_expire_days)
     
     to_encode.update({"exp": expire, "type": "admin_refresh"})
@@ -54,12 +45,10 @@ def create_admin_refresh_token(data: dict, expires_delta: Optional[timedelta] = 
 
 async def verify_admin_token(token: str) -> Optional[dict]:
     try:
-        # Сначала проверяем, не заблокирован ли токен в Redis
         try:
             if await redis_client.is_token_blocked(token):
                 return None
         except Exception as redis_error:
-            # Если Redis недоступен, продолжаем без проверки блокировки
             logger.warning(f"Redis unavailable for token check: {redis_error}")
             
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
@@ -71,12 +60,10 @@ async def verify_admin_token(token: str) -> Optional[dict]:
 
 async def verify_admin_refresh_token(token: str) -> Optional[dict]:
     try:
-        # Проверяем, не заблокирован ли refresh токен в Redis
         try:
             if await redis_client.is_token_blocked(token):
                 return None
         except Exception as redis_error:
-            # Если Redis недоступен, продолжаем без проверки блокировки
             logger.warning(f"Redis unavailable for refresh token check: {redis_error}")
             
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
@@ -110,8 +97,7 @@ async def get_current_admin(
     except (ValueError, TypeError):
         raise credentials_exception
     
-    result = await db.execute(select(Admin).filter(Admin.id == admin_id))
-    admin = result.scalar_one_or_none()
+    admin = await AdminOperations.get_by_id(db, admin_id)
     if admin is None:
         raise credentials_exception
     
@@ -125,10 +111,8 @@ async def get_current_active_admin(current_admin: Admin = Depends(get_current_ad
 async def block_admin_tokens(access_token: str, refresh_token: str = None) -> bool:
     """Блокирует токены администратора при logout"""
     try:
-        # Блокируем access токен на время его истечения (15 минут)
         await redis_client.block_token(access_token, ttl=settings.admin_access_token_expire_minutes * 60)
         
-        # Блокируем refresh токен на время его истечения (3 дня), если он передан
         if refresh_token:
             await redis_client.block_token(refresh_token, ttl=settings.admin_refresh_token_expire_days * 24 * 60 * 60)
         

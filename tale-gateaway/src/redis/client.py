@@ -31,41 +31,6 @@ class RedisClient:
             print(f"Redis error blocking token: {e}")
             return False
     
-    async def unblock_token(self, token: str) -> bool:
-        """Разблокирует токен"""
-        try:
-            await self.redis_client.delete(f"blocked_token:{token}")
-            return True
-        except Exception as e:
-            print(f"Redis error unblocking token: {e}")
-            return False
-    
-    async def set_session_data(self, session_id: str, data: Dict[str, Any], ttl: int = 3600) -> bool:
-        """Сохраняет данные сессии"""
-        try:
-            await self.redis_client.setex(f"session:{session_id}", ttl, json.dumps(data))
-            return True
-        except Exception as e:
-            print(f"Redis error setting session data: {e}")
-            return False
-    
-    async def get_session_data(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """Получает данные сессии"""
-        try:
-            data = await self.redis_client.get(f"session:{session_id}")
-            return json.loads(data) if data else None
-        except Exception as e:
-            print(f"Redis error getting session data: {e}")
-            return None
-    
-    async def delete_session_data(self, session_id: str) -> bool:
-        """Удаляет данные сессии"""
-        try:
-            await self.redis_client.delete(f"session:{session_id}")
-            return True
-        except Exception as e:
-            print(f"Redis error deleting session data: {e}")
-            return False
 
     async def close(self):
         """Закрывает соединение с Redis"""

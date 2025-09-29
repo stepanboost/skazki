@@ -72,13 +72,6 @@ class MinIOClient:
             print(f"Error deleting file: {e}")
             return False
     
-    def file_exists(self, object_name: str) -> bool:
-        """Проверяет существование файла в MinIO"""
-        try:
-            self.client.stat_object(self.bucket_name, object_name)
-            return True
-        except S3Error:
-            return False
 
 # Глобальный экземпляр клиента
 minio_client = MinIOClient()

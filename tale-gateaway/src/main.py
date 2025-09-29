@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from src.database.database import setup_database
 from src.routers.authorization.session_router import router as session_router
-from src.routers.authorization.admin_router import router as admin_router
 from src.routers.authorization.admin_router import router as admin_auth_router
 from src.routers.audio_router import router as audio_router
 from src.routers.fairy_tales_router import router as fairy_tales_router
@@ -15,7 +14,6 @@ async def lifespan(app: FastAPI):
     await setup_database()
     print("База данных инициализирована")
     yield
-    # Закрываем Redis соединение при остановке
     from src.redis.client import redis_client
     await redis_client.close()
     print("Приложение остановлено")
@@ -34,7 +32,6 @@ app = FastAPI(
     }
 )
 
-# Добавляем схему безопасности в Swagger
 app.openapi_schema = None  # Сброс кэша для пересоздания схемы
 
 def custom_openapi():
@@ -58,7 +55,6 @@ def custom_openapi():
         }
     }
     
-    # Применяем схему ко всем эндпоинтам кроме публичных
     for path in openapi_schema["paths"]:
         for method in openapi_schema["paths"][path]:
             if path not in ["/health", "/docs", "/openapi.json"]:
@@ -69,7 +65,6 @@ def custom_openapi():
 
 app.openapi = custom_openapi
 
-# CORS должен быть первым middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:8080"],

@@ -30,25 +30,10 @@ async def setup_database():
 
 async def create_default_admin():
     """Создание админа по умолчанию из настроек"""
-    from src.database.models import Admin
-    from src.utils.admin_auth import get_password_hash
+    from src.database.operations.admin_operations import AdminOperations
     
     async with AsyncSessionLocal() as db:
-        # Проверяем, есть ли уже админ
-        result = await db.execute(select(Admin).filter(Admin.username == settings.admin_username))
-        existing_admin = result.scalar_one_or_none()
-        
-        if not existing_admin:
-            # Создаем админа
-            admin = Admin(
-                username=settings.admin_username,
-                hashed_password=get_password_hash(settings.admin_password)
-            )
-            
-            db.add(admin)
-            await db.commit()
-            print(f"Админ создан: username={settings.admin_username}")
-        else:
-            print(f"Админ {settings.admin_username} уже существует")
+        admin = await AdminOperations.create_default_admin(db)
+        print(f"Админ создан: username={admin.username}")
 
 SessionDep = Annotated[AsyncSession, Depends(get_db)]

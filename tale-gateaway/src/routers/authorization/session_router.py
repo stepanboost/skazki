@@ -3,27 +3,14 @@ from fastapi import APIRouter, Depends, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from src.database.database import get_db
-from src.database.models import AnonymousSession
-from src.schemas.session_schemas import SessionResponse
-from src.utils.session_auth import create_new_session, create_session_token, get_session_by_token
+from src.database.operations.session_operations import SessionOperations
+from src.utils.session_auth import create_session_token, get_session_by_token
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/session", tags=["session"])
+router = APIRouter(prefix="/session", tags=["Анонимные сессии"])
 
 
-@router.get("/info")
-async def get_session_info(
-    session: AnonymousSession = Depends(get_session_by_token)
-):
-    """Получение информации о текущей сессии"""
-    return {
-        "session_id": session.session_id,
-        "created_at": session.created_at,
-        "last_activity": session.last_activity,
-        "is_active": session.is_active,
-        "revoked": session.revoked
-    }
 
 @router.post("/create")
 async def create_anonymous_session(
@@ -40,15 +27,8 @@ async def create_anonymous_session(
         from src.utils.session_auth import verify_session_token
         session_id = verify_session_token(token)
         if session_id:
-            result = await db.execute(
-                select(AnonymousSession).where(
-                    AnonymousSession.session_id == session_id,
-                    AnonymousSession.is_active == True,
-                    AnonymousSession.revoked == False
-                )
-            )
-            existing_session = result.scalar_one_or_none()
-            if existing_session:
+            existing_session = await SessionOperations.get_by_session_id(db, session_id)
+            if existing_session and existing_session.is_active and not existing_session.revoked:
                 logger.info("Returning existing session")
                 return {
                     "session_id": existing_session.session_id,
@@ -59,7 +39,11 @@ async def create_anonymous_session(
                 logger.info("No existing session found, will create new one")
     
     logger.info("Creating new session...")
-    session = await create_new_session(request, db)
+    session = await SessionOperations.create_session(
+        db,
+        user_agent=request.headers.get("User-Agent"),
+        ip_address=request.client.host if request.client else None
+    )
     
     try:
         access_token = create_session_token(session.session_id)
@@ -78,19 +62,5 @@ async def create_anonymous_session(
         )
 
 
-@router.post("/logout")
-async def revoke_session(
-    session: AnonymousSession = Depends(get_session_by_token),
-    db: AsyncSession = Depends(get_db)
-):
-    """Отзыв текущей сессии"""
-    await db.execute(
-        update(AnonymousSession)
-        .filter(AnonymousSession.session_id == session.session_id)
-        .values(revoked=True)
-    )
-    await db.commit()
-    
-    return {"message": "Сессия отозвана"}
 
 

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from src.database.database import get_db
 from src.database.models import AnonymousSession
+from src.database.operations.session_operations import SessionOperations
 from src.config import settings
 
 logger = logging.getLogger(__name__)
@@ -69,14 +70,7 @@ async def get_session_by_token(
             detail="Неверный токен"
         )
     
-    result = await db.execute(
-        select(AnonymousSession).filter(
-            AnonymousSession.session_id == session_id,
-            AnonymousSession.is_active == True,
-            AnonymousSession.revoked == False
-        )
-    )
-    session = result.scalar_one_or_none()
+    session = await SessionOperations.get_by_session_id(db, session_id)
     
     if not session:
         raise HTTPException(
@@ -91,23 +85,9 @@ async def create_new_session(
     db: AsyncSession = Depends(get_db)
 ) -> AnonymousSession:
     """Создание новой анонимной сессии"""
-    session_id = str(uuid.uuid4())
-    logger.info(f"Creating new session with ID: {session_id}")
-    
-    # Получаем информацию о браузере
-    user_agent = request.headers.get("User-Agent", "")
-    ip_address = request.client.host if request.client else None
-    
-    new_session = AnonymousSession(
-        session_id=session_id,
-        user_agent=user_agent,
-        ip_address=ip_address
+    return await SessionOperations.create_session(
+        db,
+        user_agent=request.headers.get("User-Agent", ""),
+        ip_address=request.client.host if request.client else None
     )
-    
-    db.add(new_session)
-    await db.commit()
-    await db.refresh(new_session)
-    logger.info(f"Session {session_id} saved to database")
-    
-    return new_session
 

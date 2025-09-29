@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from src.database.database import get_db
 from src.database.models import FairyTale, AudioFile
 from src.schemas.fairy_tales_schemas import (
@@ -12,24 +12,11 @@ from src.schemas.fairy_tales_schemas import (
 )
 from src.utils.session_auth import get_session_by_token
 from src.utils.admin_auth import get_current_active_admin
-from typing import List
 from src.utils.minio_client import minio_client
 import uuid
 
-router = APIRouter(prefix="/fairy-tales", tags=["fairy-tales"])
+router = APIRouter(prefix="/fairy-tales", tags=["Сказки"])
 
-@router.options("/")
-async def options_fairy_tales(request: Request):
-    """Обработка OPTIONS запросов для CORS"""
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": request.headers.get("Origin", "*"),
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            "Access-Control-Allow-Credentials": "true",
-        }
-    )
 
 @router.get("/", response_model=FairyTaleListResponse)
 async def get_fairy_tales(
@@ -185,31 +172,6 @@ async def get_fairy_tale_by_id(
         author_id=fairy_tale.author_id,
     )
 
-@router.get("/{fairy_tale_id}/audio-files")
-async def get_audio_files(
-    fairy_tale_id: int,
-    session = Depends(get_session_by_token),
-    db: AsyncSession = Depends(get_db)
-):
-    """Получение аудиофайлов для сказки"""
-    result = await db.execute(
-        select(AudioFile).filter(AudioFile.fairy_tale_id == fairy_tale_id)
-    )
-    audio_files = result.scalars().all()
-    
-    return [
-        {
-            "id": file.id,
-            "original_filename": file.original_filename,
-            "file_size": file.file_size,
-            "duration": file.duration,
-            "mime_type": file.mime_type,
-            "created_at": file.created_at,
-            "fairy_tale_id": file.fairy_tale_id
-        }
-        for file in audio_files
-    ]
-
 # Админские эндпоинты для CRUD операций
 
 @router.post("/", response_model=FairyTaleResponse)
@@ -222,7 +184,6 @@ async def create_fairy_tale(
     # Генерируем внешний ID
     external_id = str(uuid.uuid4())
     
-    # Создаем новую сказку
     fairy_tale = FairyTale(
         external_id=external_id,
         title=fairy_tale_data.title,
