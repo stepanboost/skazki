@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useFairyTales } from '@/context/FairyTaleContext';
@@ -12,11 +12,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowLeft, Plus, Edit, Trash2, Eye, Search, LogOut } from 'lucide-react';
 import FairyTaleForm from '@/components/FairyTaleForm';
 import AdminLogin from '@/components/AdminLogin';
+import { apiService } from '@/services/api';
 
 const AdminPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { fairyTales, addFairyTale, updateFairyTale, deleteFairyTale } = useFairyTales();
-  const { isAuthenticated, isLoading, login, logout } = useAuth();
+  const { fairyTales, addFairyTale, updateFairyTale, deleteFairyTale, refreshFairyTales } = useFairyTales();
+  const { isAuthenticated, isLoading, error, login, logout } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [editingTale, setEditingTale] = useState<FairyTale | undefined>(undefined);
 
@@ -34,7 +35,7 @@ const AdminPage: React.FC = () => {
 
   // Показываем форму входа если не аутентифицирован
   if (!isAuthenticated) {
-    return <AdminLogin onLogin={login} />;
+    return <AdminLogin onLogin={login} error={error} isLoading={isLoading} />;
   }
 
   const filteredTales = fairyTales.filter(tale =>
@@ -63,9 +64,14 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  const handleDelete = (id: string, title: string) => {
+  const handleDelete = async (id: string, title: string) => {
     if (window.confirm(`Вы уверены, что хотите удалить сказку "${title}"?`)) {
-      deleteFairyTale(id);
+      try {
+        await deleteFairyTale(id);
+      } catch (error) {
+        console.error('Ошибка удаления сказки:', error);
+        alert('Ошибка удаления сказки. Попробуйте снова.');
+      }
     }
   };
 
@@ -73,17 +79,33 @@ const AdminPage: React.FC = () => {
     window.open(`/fairy-tale/${id}`, '_blank');
   };
 
-  const handleSave = (taleData: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (editingTale) {
-      // Редактирование существующей сказки
-      updateFairyTale(editingTale.id, taleData);
-    } else {
-      // Создание новой сказки
-      addFairyTale(taleData);
+  const handleSave = async (taleData: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>, files?: { audioFile?: File, coverFile?: File }) => {
+    try {
+      if (editingTale) {
+        // Редактирование существующей сказки
+        await updateFairyTale(editingTale.id, taleData);
+        
+        // Если есть файлы, заменяем их
+        if (files?.audioFile) {
+          await apiService.replaceAudioFile(editingTale.id, files.audioFile);
+        }
+        if (files?.coverFile) {
+          await apiService.replaceCoverFile(editingTale.id, files.coverFile);
+        }
+      } else {
+        // Создание новой сказки
+        await addFairyTale(taleData, files);
+      }
+      
+      // Обновляем список сказок после сохранения
+      await refreshFairyTales();
+      
+      setShowForm(false);
+      setEditingTale(undefined);
+    } catch (error) {
+      console.error('Ошибка сохранения сказки:', error);
+      alert('Ошибка сохранения сказки. Попробуйте снова.');
     }
-    
-    setShowForm(false);
-    setEditingTale(undefined);
   };
 
   const handleCancel = () => {

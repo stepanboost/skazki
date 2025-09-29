@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FairyTale } from '@/types/fairyTale';
-import { mockFairyTales } from '@/data/mockFairyTales';
+import { apiService } from '@/services/api';
+import { transformFairyTales, transformFairyTale } from '@/utils/dataTransform';
 
 interface FairyTaleContextType {
   fairyTales: FairyTale[];
-  setFairyTales: (tales: FairyTale[]) => void;
-  addFairyTale: (tale: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateFairyTale: (id: string, tale: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  deleteFairyTale: (id: string) => void;
-  restoreFromBackup: () => void;
-  clearAllData: () => void;
+  loading: boolean;
+  error: string | null;
+  refreshFairyTales: () => Promise<void>;
+  getFairyTaleById: (id: string) => Promise<FairyTale | null>;
+  addFairyTale: (fairyTale: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>, files?: { audioFile?: File, coverFile?: File }) => Promise<void>;
+  updateFairyTale: (id: string, fairyTale: Partial<FairyTale>) => Promise<void>;
+  deleteFairyTale: (id: string) => Promise<void>;
+  forceRefresh: () => Promise<void>;
 }
 
 const FairyTaleContext = createContext<FairyTaleContextType | undefined>(undefined);
@@ -28,99 +31,190 @@ interface FairyTaleProviderProps {
 
 export const FairyTaleProvider: React.FC<FairyTaleProviderProps> = ({ children }) => {
   const [fairyTales, setFairyTales] = useState<FairyTale[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Загружаем данные из localStorage или используем моковые данные
+  // Инициализация сессии и загрузка данных
   useEffect(() => {
-    const savedTales = localStorage.getItem('fairyTales');
-    if (savedTales) {
-      try {
-        const parsedTales = JSON.parse(savedTales);
-        // Проверяем, что данные валидны
-        if (Array.isArray(parsedTales) && parsedTales.length > 0) {
-          setFairyTales(parsedTales);
-        } else {
-          setFairyTales(mockFairyTales);
-        }
-      } catch (error) {
-        console.error('Ошибка загрузки сказок из localStorage:', error);
-        setFairyTales(mockFairyTales);
-      }
-    } else {
-      // Если нет сохраненных данных, используем моковые и сохраняем их
-      setFairyTales(mockFairyTales);
-    }
+    initializeSession();
   }, []);
 
-  // Сохраняем данные в localStorage при изменении
-  useEffect(() => {
-    if (fairyTales.length > 0) {
-      try {
-        localStorage.setItem('fairyTales', JSON.stringify(fairyTales));
-        // Также сохраняем резервную копию
-        localStorage.setItem('fairyTales_backup', JSON.stringify(fairyTales));
-      } catch (error) {
-        console.error('Ошибка сохранения сказок в localStorage:', error);
-      }
-    }
-  }, [fairyTales]);
-
-  const addFairyTale = (taleData: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date().toISOString();
-    const newTale: FairyTale = {
-      ...taleData,
-      id: Date.now().toString(),
-      createdAt: now,
-      updatedAt: now
-    };
-    setFairyTales(prev => [...prev, newTale]);
-  };
-
-  const updateFairyTale = (id: string, taleData: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const now = new Date().toISOString();
-    setFairyTales(prev => prev.map(tale => 
-      tale.id === id 
-        ? {
-            ...tale,
-            ...taleData,
-            updatedAt: now
-          }
-        : tale
-    ));
-  };
-
-  const deleteFairyTale = (id: string) => {
-    setFairyTales(prev => prev.filter(tale => tale.id !== id));
-  };
-
-  const restoreFromBackup = () => {
+  const initializeSession = async () => {
     try {
-      const backupData = localStorage.getItem('fairyTales_backup');
-      if (backupData) {
-        const parsedBackup = JSON.parse(backupData);
-        if (Array.isArray(parsedBackup)) {
-          setFairyTales(parsedBackup);
-          localStorage.setItem('fairyTales', backupData);
-        }
+      setLoading(true);
+      setError(null);
+
+      // Проверяем, есть ли админский токен
+      const adminToken = localStorage.getItem('admin_token');
+      
+      if (!adminToken) {
+        // Если нет админского токена, создаем пользовательскую сессию
+        await apiService.createSession();
       }
-    } catch (error) {
-      console.error('Ошибка восстановления из резервной копии:', error);
+
+      // Загружаем сказки
+      await loadFairyTales();
+    } catch (err) {
+      console.error('Ошибка инициализации:', err);
+      setError('Не удалось загрузить данные');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const clearAllData = () => {
-    localStorage.removeItem('fairyTales');
-    localStorage.removeItem('fairyTales_backup');
-    setFairyTales(mockFairyTales);
+  const loadFairyTales = async () => {
+    try {
+      // Обновляем токены в памяти API сервиса
+      apiService.updateTokens();
+      
+      // Проверяем, есть ли админский токен
+      const adminToken = localStorage.getItem('admin_token');
+      let apiTales;
+      
+      if (adminToken) {
+        // Если есть админский токен, загружаем все сказки
+        apiTales = await apiService.getFairyTalesAdmin();
+      } else {
+        // Если нет админского токена, загружаем только опубликованные
+        apiTales = await apiService.getFairyTales();
+      }
+      
+      const transformedTales = await transformFairyTales(apiTales);
+      setFairyTales(transformedTales);
+    } catch (err) {
+      console.error('Ошибка загрузки сказок:', err);
+      throw err;
+    }
+  };
+
+  const refreshFairyTales = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await loadFairyTales();
+    } catch (err) {
+      console.error('Ошибка обновления сказок:', err);
+      setError('Не удалось обновить данные');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const forceRefresh = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await loadFairyTales();
+    } catch (err) {
+      console.error('Ошибка принудительного обновления сказок:', err);
+      setError('Не удалось обновить данные');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFairyTaleById = async (id: string): Promise<FairyTale | null> => {
+    try {
+      const apiTale = await apiService.getFairyTaleById(id);
+      const transformedTale = await transformFairyTale(apiTale);
+      return transformedTale;
+    } catch (err) {
+      console.error('Ошибка загрузки сказки:', err);
+      return null;
+    }
+  };
+
+  const addFairyTale = async (fairyTaleData: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>, files?: { audioFile?: File, coverFile?: File }) => {
+    try {
+      let createdTale;
+      
+      if (files?.audioFile || files?.coverFile) {
+        // Если есть файлы, создаем сказку через uploadFiles
+        console.log('Creating fairy tale with files');
+        
+        const uploadResponse = await apiService.uploadFiles(files.audioFile, files.coverFile);
+        
+        // Обновляем сказку с данными из формы
+        const apiData = {
+          title: fairyTaleData.title,
+          author_name: fairyTaleData.author || undefined,
+          description: fairyTaleData.description || undefined,
+          content: fairyTaleData.content,
+          status: fairyTaleData.status,
+          order: fairyTaleData.order,
+          tags: fairyTaleData.tags && fairyTaleData.tags.length > 0 ? JSON.stringify(fairyTaleData.tags) : undefined
+        };
+        
+        createdTale = await apiService.updateFairyTale(uploadResponse.fairy_tale_external_id, apiData);
+      } else {
+        // Если нет файлов, создаем обычным способом
+        console.log('Creating fairy tale without files');
+        const apiData = {
+          title: fairyTaleData.title,
+          author_name: fairyTaleData.author || undefined,
+          description: fairyTaleData.description || undefined,
+          content: fairyTaleData.content,
+          status: fairyTaleData.status,
+          order: fairyTaleData.order,
+          tags: fairyTaleData.tags && fairyTaleData.tags.length > 0 ? JSON.stringify(fairyTaleData.tags) : undefined
+        };
+        
+        createdTale = await apiService.createFairyTale(apiData);
+      }
+      
+      const transformedTale = await transformFairyTale(createdTale);
+      setFairyTales(prev => [...prev, transformedTale]);
+    } catch (err) {
+      console.error('Ошибка создания сказки:', err);
+      throw err;
+    }
+  };
+
+  const updateFairyTale = async (id: string, fairyTaleData: Partial<FairyTale>) => {
+    try {
+      // Преобразуем данные для API
+      const apiData: any = {};
+      if (fairyTaleData.title !== undefined) apiData.title = fairyTaleData.title;
+      if (fairyTaleData.author !== undefined) apiData.author_name = fairyTaleData.author;
+      if (fairyTaleData.description !== undefined) apiData.description = fairyTaleData.description;
+      if (fairyTaleData.content !== undefined) apiData.content = fairyTaleData.content;
+      if (fairyTaleData.status !== undefined) apiData.status = fairyTaleData.status;
+      if (fairyTaleData.order !== undefined) apiData.order = fairyTaleData.order;
+      if (fairyTaleData.tags !== undefined) {
+        apiData.tags = fairyTaleData.tags && fairyTaleData.tags.length > 0 ? JSON.stringify(fairyTaleData.tags) : undefined;
+      }
+      
+      const apiTale = await apiService.updateFairyTale(id, apiData);
+      const transformedTale = await transformFairyTale(apiTale);
+      setFairyTales(prev => prev.map(tale => 
+        tale.id === id ? transformedTale : tale
+      ));
+    } catch (err) {
+      console.error('Ошибка обновления сказки:', err);
+      throw err;
+    }
+  };
+
+  const deleteFairyTale = async (id: string) => {
+    try {
+      await apiService.deleteFairyTale(id);
+      setFairyTales(prev => prev.filter(tale => tale.id !== id));
+    } catch (err) {
+      console.error('Ошибка удаления сказки:', err);
+      throw err;
+    }
   };
 
   const value: FairyTaleContextType = {
     fairyTales,
-    setFairyTales,
+    loading,
+    error,
+    refreshFairyTales,
+    getFairyTaleById,
     addFairyTale,
     updateFairyTale,
     deleteFairyTale,
-    restoreFromBackup,
-    clearAllData
+    forceRefresh
   };
 
   return (

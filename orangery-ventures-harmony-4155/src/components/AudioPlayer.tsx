@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Volume2, VolumeX, RotateCcw } from 'lucide-react';
 import { useAudio } from '@/context/AudioContext';
-import { getFileByUrl, createBlobUrl } from '@/utils/fileStorage';
 
 interface AudioPlayerProps {
   src: string;
@@ -26,9 +25,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, fairyTaleId, clas
       togglePlayPause();
     } else {
       // Если это другой трек, запускаем его
-      // Получаем правильный URL для воспроизведения
-      const audioSrc = getFileByUrl(src) || src;
-      playAudio(fairyTaleId, audioSrc);
+      playAudio(fairyTaleId, src);
     }
   };
 

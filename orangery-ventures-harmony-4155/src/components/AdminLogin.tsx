@@ -8,34 +8,21 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 
 interface AdminLoginProps {
-  onLogin: () => void;
+  onLogin: (password: string) => void;
+  error?: string | null;
+  isLoading?: boolean;
   className?: string;
 }
 
-const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, className }) => {
+const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, error, isLoading, className }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    // Имитируем задержку для безопасности
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    if (password === '03216') {
-      // Сохраняем сессию в localStorage
-      localStorage.setItem('adminSession', 'authenticated');
-      localStorage.setItem('adminLoginTime', Date.now().toString());
-      onLogin();
-    } else {
-      setError('Неверный пароль. Попробуйте снова.');
+    if (password.trim()) {
+      onLogin(password);
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -87,7 +74,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, className }) => {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoading}
+              disabled={isLoading || !password.trim()}
             >
               {isLoading ? 'Проверка...' : 'Войти'}
             </Button>

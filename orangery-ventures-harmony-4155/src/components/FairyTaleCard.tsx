@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Download, BookOpen, Clock, User } from 'lucide-react';
 import { useAudio } from '@/context/AudioContext';
-import { getFileByUrl, createBlobUrl, extractFileId, getImageFile } from '@/utils/fileStorage';
+// Убираем импорт fileStorage, так как теперь работаем с presigned URL
 
 interface FairyTaleCardProps {
   fairyTale: FairyTale;
@@ -33,13 +33,11 @@ const FairyTaleCard: React.FC<FairyTaleCardProps> = ({ fairyTale, className }) =
       if (isPlaying) {
         pauseAudio();
       } else {
-        const audioSrc = getFileByUrl(fairyTale.audioFile) || fairyTale.audioFile;
-        playAudio(fairyTale.id, audioSrc);
+        playAudio(fairyTale.id, fairyTale.audioFile);
       }
     } else {
       // Если это другой трек, запускаем его
-      const audioSrc = getFileByUrl(fairyTale.audioFile) || fairyTale.audioFile;
-      playAudio(fairyTale.id, audioSrc);
+      playAudio(fairyTale.id, fairyTale.audioFile);
     }
   };
 
@@ -52,42 +50,12 @@ const FairyTaleCard: React.FC<FairyTaleCardProps> = ({ fairyTale, className }) =
     try {
       console.log('Начинаем скачивание:', fairyTale.audioFile);
       
-      // Получаем файл из localStorage или используем обычный URL
-      const audioData = getFileByUrl(fairyTale.audioFile);
-      const isStoredFile = audioData !== fairyTale.audioFile;
-      
-      let downloadUrl: string;
-      let fileName: string;
-      
-      if (isStoredFile && audioData) {
-        // Файл из localStorage
-        downloadUrl = createBlobUrl(audioData);
-        const fileId = extractFileId(fairyTale.audioFile);
-        fileName = fileId ? `${fileId}.mp3` : `${fairyTale.title.replace(/[^a-zA-Z0-9а-яА-Я\s]/g, '')}.mp3`;
-      } else {
-        // Обычный файл
-        downloadUrl = fairyTale.audioFile;
-        
-        // Извлекаем оригинальное имя файла из URL или создаем безопасное имя
-        const getOriginalFileName = (url: string, fallbackTitle: string) => {
-          try {
-            const urlPath = new URL(url, window.location.origin).pathname;
-            const originalName = urlPath.split('/').pop();
-            if (originalName && originalName.includes('.')) {
-              return originalName;
-            }
-          } catch (e) {
-            // Если URL невалидный, используем fallback
-          }
-          return `${fallbackTitle.replace(/[^a-zA-Z0-9а-яА-Я\s]/g, '')}.mp3`;
-        };
-        
-        fileName = getOriginalFileName(fairyTale.audioFile, fairyTale.title);
-      }
+      // Создаем безопасное имя файла
+      const fileName = `${fairyTale.title.replace(/[^a-zA-Z0-9а-яА-Я\s]/g, '')}.mp3`;
       
       // Создаем ссылку для скачивания
       const downloadLink = document.createElement('a');
-      downloadLink.href = downloadUrl;
+      downloadLink.href = fairyTale.audioFile;
       downloadLink.download = fileName;
       downloadLink.style.display = 'none';
       
@@ -96,32 +64,13 @@ const FairyTaleCard: React.FC<FairyTaleCardProps> = ({ fairyTale, className }) =
       downloadLink.click();
       document.body.removeChild(downloadLink);
       
-      // Освобождаем память для blob URL
-      if (isStoredFile) {
-        URL.revokeObjectURL(downloadUrl);
-      }
-      
       console.log('Скачивание успешно завершено');
       
     } catch (error) {
       console.error('Ошибка скачивания:', error);
       
-      // Fallback: пробуем простой способ
-      try {
-        const link = document.createElement('a');
-        link.href = fairyTale.audioFile;
-        link.download = `${fairyTale.title.replace(/[^a-zA-Z0-9а-яА-Я\s]/g, '')}.mp3`;
-        link.target = '_blank';
-        link.style.display = 'none';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (fallbackError) {
-        console.error('Fallback скачивание тоже не сработало:', fallbackError);
-        // Последний fallback - открываем в новой вкладке
-        window.open(fairyTale.audioFile, '_blank');
-      }
+      // Fallback - открываем в новой вкладке
+      window.open(fairyTale.audioFile, '_blank');
     }
   };
 
@@ -130,7 +79,7 @@ const FairyTaleCard: React.FC<FairyTaleCardProps> = ({ fairyTale, className }) =
       <div className="relative overflow-hidden">
         {fairyTale.coverImage ? (
           <img
-            src={getImageFile(extractFileId(fairyTale.coverImage) || '') || fairyTale.coverImage}
+            src={fairyTale.coverImage}
             alt={fairyTale.title}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           />
