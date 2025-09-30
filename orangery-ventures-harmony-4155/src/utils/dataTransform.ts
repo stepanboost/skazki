@@ -39,16 +39,17 @@ export const transformFairyTale = async (apiTale: FairyTaleResponse): Promise<Fa
 
 // Преобразование массива сказок
 export const transformFairyTales = async (apiTales: FairyTaleResponse[]): Promise<FairyTale[]> => {
-  // Проверяем, что apiTales - это массив
-  if (!Array.isArray(apiTales)) {
-    console.error('apiTales is not an array:', apiTales);
-    return [];
-  }
-  
   const transformedTales = await Promise.all(
-    apiTales.map(transformFairyTale)
+    apiTales.map(tale => transformFairyTale(tale))
   );
-  
-  // Сортируем по order
-  return transformedTales.sort((a, b) => a.order - b.order);
+  return transformedTales;
 };
+
+// Преобразование аудиофайлов
+export const transformAudioFiles = (apiAudioFiles: AudioFileResponse[]): AudioFileResponse[] => {
+  return apiAudioFiles.map(audio => ({
+    ...audio,
+    // Здесь можно добавить дополнительную обработку если нужно
+  }));
+};
+

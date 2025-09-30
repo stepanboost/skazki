@@ -6,7 +6,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     database_url: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/skazki_db")
-    secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
+    secret_key: str = os.getenv("SECRET_KEY")
     algorithm: str = "HS256"
     admin_username: str = os.getenv("ADMIN_USER", "Владимир Журавлёв")
     admin_password: str = os.getenv("ADMIN_PASSWORD", "admin123")
@@ -15,11 +15,13 @@ class Settings(BaseSettings):
     admin_refresh_token_expire_days: int = 3     # 3 дня
     
     # MinIO настройки
-    minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "minio:9000")
+    minio_public_endpoint: str = os.getenv("MINIO_PUBLIC_ENDPOINT", "localhost:9000")
     minio_access_key: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     minio_secret_key: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     minio_bucket_name: str = os.getenv("MINIO_BUCKET_NAME", "skazki-audio")
     minio_secure: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    minio_region: str = os.getenv("MINIO_REGION", "us-east-1")
     
     # Redis настройки
     redis_host: str = os.getenv("REDIS_HOST", "localhost")

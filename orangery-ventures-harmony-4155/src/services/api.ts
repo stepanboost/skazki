@@ -21,7 +21,7 @@ interface FileMetaResponse {
   presigned_url: string;
 }
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = '/api';
 
 class ApiService {
   private sessionToken: string | null = null;

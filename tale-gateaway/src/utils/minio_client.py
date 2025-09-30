@@ -50,11 +50,21 @@ class MinIOClient:
     def get_presigned_url(self, object_name: str, expires_seconds: int = 3600) -> Optional[str]:
         """Получает presigned URL для доступа к файлу"""
         try:
-            url = self.client.presigned_get_object(
+            # Создаем клиент для генерации URL с публичным endpoint
+            url_client = Minio(
+                settings.minio_public_endpoint,  # Используем localhost:9000 для подписи
+                access_key=settings.minio_access_key,
+                secret_key=settings.minio_secret_key,
+                secure=settings.minio_secure,
+                region=settings.minio_region
+            )
+            
+            url = url_client.presigned_get_object(
                 bucket_name=self.bucket_name,
                 object_name=object_name,
                 expires=timedelta(seconds=expires_seconds)
             )
+            
             return url
         except S3Error as e:
             print(f"Error generating presigned URL: {e}")

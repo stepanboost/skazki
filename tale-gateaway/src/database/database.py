@@ -1,11 +1,10 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import select
 from typing import AsyncGenerator, Annotated
 from fastapi import Depends
 from src.config import settings
 
-engine = create_async_engine(settings.database_url)
+engine = create_async_engine(settings.database_url, echo=False)
 
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
@@ -21,12 +20,10 @@ async def setup_database():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    # Создание админа по умолчанию (после создания таблиц)
     try:
         await create_default_admin()
     except Exception as e:
         print(f"Ошибка при создании админа: {e}")
-        # Не прерываем запуск приложения, если админ уже существует
 
 async def create_default_admin():
     """Создание админа по умолчанию из настроек"""
