@@ -38,6 +38,7 @@ class FairyTale(Base):
     id = Column(Integer, primary_key=True, index=True)
     external_id = Column(String(255), unique=True, index=True, nullable=False)
     title = Column(String(200), nullable=False, index=True)
+    description = Column(Text, nullable=True)
     author_name = Column(String(100), nullable=True)
     content = Column(Text, nullable=False)
     audio_external_name = Column(String(500), nullable=True)
@@ -48,7 +49,6 @@ class FairyTale(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    # Внешний ключ на админа-автора (необязательный)
     author_id = Column(Integer, ForeignKey("admins.id"), nullable=True)
     # author = relationship("Admin", back_populates="fairy_tales")
     

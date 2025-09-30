@@ -103,8 +103,14 @@ const FairyTaleForm: React.FC<FairyTaleFormProps> = ({
         size: file.size
       });
       
-      // Проверяем тип файла
-      if (!file.type.startsWith('audio/')) {
+      // Проверяем тип файла (поддерживаем только MP3, WAV, OGG)
+      const isAudioFile = file.type === 'audio/mpeg' || 
+                         file.type === 'audio/wav' || 
+                         file.type === 'audio/ogg' ||
+                         file.type === 'application/ogg' ||
+                         file.name.toLowerCase().match(/\.(mp3|wav|ogg)$/);
+      
+      if (!isAudioFile) {
         console.error('Invalid file type:', file.type);
         setError('Пожалуйста, выберите аудиофайл');
         return;
@@ -318,7 +324,7 @@ const FairyTaleForm: React.FC<FairyTaleFormProps> = ({
                 <input
                   id="audio-upload"
                   type="file"
-                  accept="audio/*,.mp3,.ogg,.wav"
+                  accept=".mp3,.ogg,.wav"
                   onChange={handleAudioUpload}
                   className="hidden"
                 />

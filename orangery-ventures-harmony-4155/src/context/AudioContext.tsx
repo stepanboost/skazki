@@ -87,16 +87,25 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     
     if (savedAudioSrc && savedFairyTaleId && audioRef.current) {
       const audio = audioRef.current;
-      audio.src = savedAudioSrc;
-      audio.currentTime = audioState.currentTime;
-      audio.volume = audioState.isMuted ? 0 : audioState.volume;
       
-      const wasPlaying = localStorage.getItem('audioWasPlaying') === 'true';
-      if (wasPlaying && audioState.currentTime > 0) {
-        audio.play().catch(error => {
-          console.error('Не удалось восстановить воспроизведение:', error);
-        });
-        localStorage.removeItem('audioWasPlaying');
+      // Проверяем, что это действительно восстановление (аудио еще не загружено)
+      if (audio.src !== savedAudioSrc) {
+        audio.src = savedAudioSrc;
+        audio.currentTime = audioState.currentTime;
+        audio.volume = audioState.isMuted ? 0 : audioState.volume;
+        
+        const wasPlaying = localStorage.getItem('audioWasPlaying') === 'true';
+        if (wasPlaying && audioState.currentTime > 0) {
+          // Ждем загрузки метаданных перед воспроизведением
+          const handleLoadedMetadata = () => {
+            audio.play().catch(error => {
+              console.error('Не удалось восстановить воспроизведение:', error);
+            });
+            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            localStorage.removeItem('audioWasPlaying');
+          };
+          audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+        }
       }
     }
   };
@@ -189,26 +198,41 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
     };
   }, []);
 
-  // Восстанавливаем воспроизведение при загрузке страницы
+  // Восстанавливаем воспроизведение при загрузке страницы (только один раз)
   useEffect(() => {
     if (audioState.currentFairyTaleId && audioRef.current) {
-      // Небольшая задержка для полной инициализации
-      const timer = setTimeout(() => {
-        restoreAudioAfterReload();
-      }, 500); // Увеличиваем задержку для более надежного восстановления
+      // Проверяем, что это действительно восстановление после перезагрузки
+      const savedAudioSrc = localStorage.getItem('audioSrc');
+      if (savedAudioSrc) {
+        // Небольшая задержка для полной инициализации
+        const timer = setTimeout(() => {
+          restoreAudioAfterReload();
+        }, 100); // Уменьшаем задержку
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [audioState.currentFairyTaleId]);
+  }, []); // Убираем зависимость от audioState.currentFairyTaleId
 
   const playAudio = (fairyTaleId: string, audioSrc: string) => {
     if (!audioRef.current) return;
 
     const audio = audioRef.current;
     
+    // Очищаем предыдущие обработчики
+    audio.removeEventListener('loadedmetadata', () => {});
+    
     // Останавливаем предыдущее воспроизведение
     if (audioState.isPlaying) {
       audio.pause();
+    }
+
+    // Если это тот же трек, просто возобновляем воспроизведение
+    if (audioState.currentFairyTaleId === fairyTaleId && audio.src === audioSrc) {
+      audio.play().catch(error => {
+        console.error('Не удалось воспроизвести аудио:', error);
+      });
+      return;
     }
 
     // Устанавливаем новый источник
@@ -270,13 +294,25 @@ export const AudioProvider: React.FC<AudioProviderProps> = ({ children }) => {
   const togglePlayPause = () => {
     if (!audioRef.current) return;
 
+    const audio = audioRef.current;
+    
     if (audioState.isPlaying) {
       pauseAudio();
     } else {
-      if (audioRef.current.paused) {
-        audioRef.current.play().catch(error => {
+      // Проверяем, что аудио готово к воспроизведению
+      if (audio.readyState >= 2) { // HAVE_CURRENT_DATA или выше
+        audio.play().catch(error => {
           console.error('Не удалось воспроизвести аудио:', error);
         });
+      } else {
+        // Если аудио еще не загружено, ждем события canplay
+        const handleCanPlay = () => {
+          audio.play().catch(error => {
+            console.error('Не удалось воспроизвести аудио:', error);
+          });
+          audio.removeEventListener('canplay', handleCanPlay);
+        };
+        audio.addEventListener('canplay', handleCanPlay);
       }
     }
   };
