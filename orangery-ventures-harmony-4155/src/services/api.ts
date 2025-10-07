@@ -147,7 +147,10 @@ class ApiService {
 
   // Получение presigned URL для скачивания файла
   async getFileDownloadUrl(externalName: string): Promise<FileDownloadResponse> {
-    return this.request<FileDownloadResponse>(`/files/download?external_name=${encodeURIComponent(externalName)}`);
+    console.log(`[DEBUG] Getting download URL for: ${externalName}`);
+    const response = await this.request<FileDownloadResponse>(`/files/download?external_name=${encodeURIComponent(externalName)}`);
+    console.log(`[DEBUG] Download URL response:`, response);
+    return response;
   }
 
   // Загрузка файлов (аудио и/или обложка)
@@ -156,6 +159,13 @@ class ApiService {
     audio_meta?: FileMetaResponse;
     cover_meta?: FileMetaResponse;
   }> {
+    console.log(`[DEBUG] Uploading files:`, { 
+      audioFile: audioFile?.name, 
+      coverFile: coverFile?.name,
+      audioSize: audioFile?.size,
+      coverSize: coverFile?.size
+    });
+    
     const formData = new FormData();
     if (audioFile) {
       formData.append('audio_file', audioFile);
@@ -164,7 +174,7 @@ class ApiService {
       formData.append('cover_file', coverFile);
     }
 
-    return this.request<{
+    const response = await this.request<{
       fairy_tale_external_id: string;
       audio_meta?: FileMetaResponse;
       cover_meta?: FileMetaResponse;
@@ -175,6 +185,9 @@ class ApiService {
         // Content-Type будет автоматически установлен fetch для FormData
       },
     });
+    
+    console.log(`[DEBUG] Upload response:`, response);
+    return response;
   }
 
   // Получение аудиофайлов для сказки
