@@ -39,7 +39,6 @@ const FairyTaleForm: React.FC<FairyTaleFormProps> = ({
 
   const [newTag, setNewTag] = useState('');
   const [coverImagePreview, setCoverImagePreview] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -158,7 +157,6 @@ const FairyTaleForm: React.FC<FairyTaleFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError(null);
 
     console.log('Form submission started');
@@ -166,29 +164,22 @@ const FairyTaleForm: React.FC<FairyTaleFormProps> = ({
     console.log('Cover file:', coverFile);
     console.log('Form data:', formData);
 
-    try {
-      // Подготавливаем данные для onSave
-      const taleData = {
-        title: formData.title,
-        author: formData.author || '',
-        description: formData.description || '',
-        content: formData.content,
-        coverImage: coverImagePreview || '',
-        audioFile: audioFile ? URL.createObjectURL(audioFile) : '',
-        audioDuration: formData.audioDuration,
-        tags: formData.tags,
-        status: formData.status,
-        order: formData.order
-      };
+    // Подготавливаем данные для onSave
+    const taleData = {
+      title: formData.title,
+      author: formData.author || '',
+      description: formData.description || '',
+      content: formData.content,
+      coverImage: coverImagePreview || '',
+      audioFile: audioFile ? URL.createObjectURL(audioFile) : '',
+      audioDuration: formData.audioDuration,
+      tags: formData.tags,
+      status: formData.status,
+      order: formData.order
+    };
 
-      // Передаем данные и файлы в onSave
-      onSave(taleData, { audioFile: audioFile || undefined, coverFile: coverFile || undefined });
-    } catch (err) {
-      console.error('Ошибка сохранения сказки:', err);
-      setError('Ошибка сохранения сказки. Попробуйте снова.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Передаем данные и файлы в onSave (форма закроется немедленно)
+    onSave(taleData, { audioFile: audioFile || undefined, coverFile: coverFile || undefined });
   };
 
   return (
@@ -412,8 +403,8 @@ const FairyTaleForm: React.FC<FairyTaleFormProps> = ({
             <Button type="button" variant="outline" onClick={onCancel}>
               Отмена
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Сохранение...' : (fairyTale ? 'Сохранить изменения' : 'Создать сказку')}
+            <Button type="submit">
+              {fairyTale ? 'Сохранить изменения' : 'Создать сказку'}
             </Button>
           </div>
         </form>

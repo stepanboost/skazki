@@ -13,11 +13,13 @@ import { ArrowLeft, Plus, Edit, Trash2, Eye, Search, LogOut } from 'lucide-react
 import FairyTaleForm from '@/components/FairyTaleForm';
 import AdminLogin from '@/components/AdminLogin';
 import { apiService } from '@/services/api';
+import { useToast } from '@/hooks/use-toast';
 
 const AdminPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { fairyTales, addFairyTale, updateFairyTale, deleteFairyTale, refreshFairyTales } = useFairyTales();
   const { isAuthenticated, isLoading, error, login, logout } = useAuth();
+  const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingTale, setEditingTale] = useState<FairyTale | undefined>(undefined);
 
@@ -80,32 +82,54 @@ const AdminPage: React.FC = () => {
   };
 
   const handleSave = async (taleData: Omit<FairyTale, 'id' | 'createdAt' | 'updatedAt'>, files?: { audioFile?: File, coverFile?: File }) => {
-    try {
-      if (editingTale) {
-        // Редактирование существующей сказки
-        await updateFairyTale(editingTale.id, taleData);
+    // Сразу закрываем форму для лучшего UX
+    setShowForm(false);
+    setEditingTale(undefined);
+    
+    // Показываем уведомление о начале загрузки
+    const isEditing = !!editingTale;
+    const loadingMessage = isEditing ? 'Обновление сказки...' : 'Создание сказки...';
+    
+    toast({
+      title: loadingMessage,
+      description: "Форма закрыта, загрузка выполняется в фоне",
+    });
+    
+    // Выполняем загрузку асинхронно
+    (async () => {
+      try {
+        if (isEditing) {
+          // Редактирование существующей сказки
+          await updateFairyTale(editingTale!.id, taleData);
+          
+          // Если есть файлы, заменяем их
+          if (files?.audioFile) {
+            await apiService.replaceAudioFile(editingTale!.id, files.audioFile);
+          }
+          if (files?.coverFile) {
+            await apiService.replaceCoverFile(editingTale!.id, files.coverFile);
+          }
+        } else {
+          // Создание новой сказки
+          await addFairyTale(taleData, files);
+        }
         
-        // Если есть файлы, заменяем их
-        if (files?.audioFile) {
-          await apiService.replaceAudioFile(editingTale.id, files.audioFile);
-        }
-        if (files?.coverFile) {
-          await apiService.replaceCoverFile(editingTale.id, files.coverFile);
-        }
-      } else {
-        // Создание новой сказки
-        await addFairyTale(taleData, files);
+        // Обновляем список сказок после сохранения
+        await refreshFairyTales();
+        
+        toast({
+          title: "Успешно!",
+          description: isEditing ? "Сказка обновлена" : "Сказка создана",
+        });
+      } catch (error) {
+        console.error('Ошибка сохранения сказки:', error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось сохранить сказку. Попробуйте снова.",
+          variant: "destructive",
+        });
       }
-      
-      // Обновляем список сказок после сохранения
-      await refreshFairyTales();
-      
-      setShowForm(false);
-      setEditingTale(undefined);
-    } catch (error) {
-      console.error('Ошибка сохранения сказки:', error);
-      alert('Ошибка сохранения сказки. Попробуйте снова.');
-    }
+    })();
   };
 
   const handleCancel = () => {
