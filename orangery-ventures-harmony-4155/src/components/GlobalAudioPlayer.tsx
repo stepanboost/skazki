@@ -50,6 +50,8 @@ const GlobalAudioPlayer: React.FC<GlobalAudioPlayerProps> = ({ className }) => {
                 src={currentFairyTale.coverImage}
                 alt={currentFairyTale.title}
                 className="w-12 h-12 object-cover rounded"
+                onLoad={() => console.log(`[DEBUG] Global player cover loaded: ${currentFairyTale.coverImage}`)}
+                onError={(e) => console.error(`[DEBUG] Global player cover failed: ${currentFairyTale.coverImage}`, e)}
               />
             )}
             <div className="min-w-0 flex-1">
