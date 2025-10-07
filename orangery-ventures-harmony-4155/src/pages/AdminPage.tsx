@@ -92,7 +92,7 @@ const AdminPage: React.FC = () => {
     
     toast({
       title: loadingMessage,
-      description: "Форма закрыта, загрузка выполняется в фоне",
+      description: "Сказка загружается...",
     });
     
     // Выполняем загрузку асинхронно
