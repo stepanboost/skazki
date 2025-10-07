@@ -7,11 +7,12 @@ from src.config import settings
 
 class MinIOClient:
     def __init__(self):
+        # Для внутренних операций используем HTTP (внутри Docker)
         self.client = Minio(
             settings.minio_endpoint,
             access_key=settings.minio_access_key,
             secret_key=settings.minio_secret_key,
-            secure=settings.minio_secure
+            secure=False  # Внутри Docker MinIO работает по HTTP
         )
         self.bucket_name = settings.minio_bucket_name
         self._ensure_bucket_exists()
@@ -64,7 +65,7 @@ class MinIOClient:
                 host,  # Используем только хост без протокола
                 access_key=settings.minio_access_key,
                 secret_key=settings.minio_secret_key,
-                secure=True,  # Принудительно используем HTTPS
+                secure=True,  # Для внешних ссылок используем HTTPS
                 region=settings.minio_region
             )
             

@@ -33,6 +33,7 @@ services:
       MINIO_BROWSER_REDIRECT_URL: https://oncetold.ru/minio/
       MINIO_REGION: ${MINIO_REGION}
       MINIO_DOMAIN: oncetold.ru
+      MINIO_SERVER_URL: https://oncetold.ru
     volumes:
       - ./minio/data:/data
     command: server /data --console-address ":9001"
