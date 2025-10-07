@@ -92,7 +92,7 @@ const AdminPage: React.FC = () => {
     
     toast({
       title: loadingMessage,
-      description: "Сказка загружается...",
+      description: "Сказка загружается",
     });
     
     // Выполняем загрузку асинхронно
