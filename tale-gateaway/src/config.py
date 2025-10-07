@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     
     # MinIO настройки
     minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "minio:9000")
-    minio_public_endpoint: str = os.getenv("MINIO_PUBLIC_ENDPOINT", "localhost:9000")
+    minio_public_endpoint: str = os.getenv("MINIO_PUBLIC_ENDPOINT", "https://oncetold.ru")
     minio_access_key: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
     minio_secret_key: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
     minio_bucket_name: str = os.getenv("MINIO_BUCKET_NAME", "skazki-audio")

@@ -50,12 +50,21 @@ class MinIOClient:
     def get_presigned_url(self, object_name: str, expires_seconds: int = 3600) -> Optional[str]:
         """Получает presigned URL для доступа к файлу"""
         try:
+            # Извлекаем хост из URL с протоколом
+            public_endpoint = settings.minio_public_endpoint
+            if public_endpoint.startswith('https://'):
+                host = public_endpoint[8:]  # Убираем 'https://'
+            elif public_endpoint.startswith('http://'):
+                host = public_endpoint[7:]  # Убираем 'http://'
+            else:
+                host = public_endpoint
+            
             # Создаем клиент для генерации URL с публичным endpoint
             url_client = Minio(
-                settings.minio_public_endpoint,  # Используем localhost:9000 для подписи
+                host,  # Используем только хост без протокола
                 access_key=settings.minio_access_key,
                 secret_key=settings.minio_secret_key,
-                secure=settings.minio_secure,
+                secure=True,  # Принудительно используем HTTPS
                 region=settings.minio_region
             )
             
