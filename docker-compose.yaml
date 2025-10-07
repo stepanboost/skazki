@@ -90,7 +90,10 @@ services:
       context: ./orangery-ventures-harmony-4155
       dockerfile: Dockerfile
     ports:
-      - 3000:80
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./letsencrypt:/var/www/letsencrypt 
     depends_on:
       - backend
     restart: unless-stopped
