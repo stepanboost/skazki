@@ -20,13 +20,6 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, title, fairyTaleId, clas
   const handlePlayPause = () => {
     if (!fairyTaleId) return;
 
-    console.log(`[DEBUG] AudioPlayer - handlePlayPause:`, {
-      src,
-      fairyTaleId,
-      isCurrentTrack,
-      audioState: audioState.currentFairyTaleId
-    });
-
     if (isCurrentTrack) {
       // Если это текущий трек, просто переключаем воспроизведение
       togglePlayPause();

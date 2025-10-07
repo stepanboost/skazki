@@ -82,8 +82,6 @@ const FairyTaleCard: React.FC<FairyTaleCardProps> = ({ fairyTale, className }) =
             src={fairyTale.coverImage}
             alt={fairyTale.title}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-            onLoad={() => console.log(`[DEBUG] Cover image loaded: ${fairyTale.coverImage}`)}
-            onError={(e) => console.error(`[DEBUG] Cover image failed to load: ${fairyTale.coverImage}`, e)}
           />
         ) : (
           <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
